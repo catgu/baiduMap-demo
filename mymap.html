@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+   <link rel="stylesheet" href="mymap.css" />
+  <script type="text/javascript" src="http://api.map.baidu.com/api?v=2.0&ak=QlsYKnljtL0tXqf3rzdAIDP6PRHHer33"></script>
+  <script type="text/javascript" src="jquery.js"></script>
+  <!-- 加载百度地图样式信息窗口 -->
+  <script type="text/javascript" src="http://api.map.baidu.com/library/SearchInfoWindow/1.5/src/SearchInfoWindow_min.js"></script>
+  <link rel="stylesheet" href="http://api.map.baidu.com/library/SearchInfoWindow/1.5/src/SearchInfoWindow_min.css" />
+  <!-- 加载城市列表 -->
+  <script type="text/javascript" src="http://api.map.baidu.com/library/CityList/1.2/src/CityList_min.js"></script>
+  <title>添加定位相关控件</title>
+</head>
+<body>
+ <div class="map1">
+    <div class="msg">
+      <p>
+      <span>请输入GPS坐标</span>
+      <span>GPS经度</span><input type="text" name=""  id="gpslng">
+      <span>GPS纬度</span><input type="text" name=""  id="gpslat">
+      <button id='confirm'>确定</button>
+      </p>
+    </div>
+    <div class="msg">
+      <p>
+      <span>百度地图经度</span><input type="text" name=""  id="lng" readOnly>
+      <span>百度地图纬度</span><input type="text" name=""  id="lat"  readOnly>
+      </p>
+    </div>
+    <div><p id='locationMsg'></p></div>
+    <div id="mymap"></div>
+ </div>
+ <div class="map2">
+  <p>批量打点</p>
+   <div id="mymap2"></div>
+   <div id="r-result">
+    <input type="button" onclick="showOver()" value="红点开关" />
+    <input type="button" onclick="hideOver()" value="人物点开关" />
+  </div>
+ </div>
+</body>
+</html>
+<script type="text/javascript">
+  // 百度地图API功能
+  var map = new BMap.Map("mymap");
+  var point = new BMap.Point(116.404, 39.915);
+  map.enableScrollWheelZoom();
+  map.addControl(new BMap.NavigationControl());  //添加默认缩放平移控件
+  map.centerAndZoom(point, 14);
+  var geoc = new BMap.Geocoder();    //创建一个地址转换对象
+  //定位到当前城市
+   var myCity = new BMap.LocalCity();
+         myCity.get(myFun);
+  function myFun(result){
+    var cityName = result.name;
+    map.setCenter(cityName);
+  }
+  //地图选点展示，并展示该点的信息
+  function showInfo(e){
+      map.clearOverlays();//清除地图上的点
+      var pt = e.point;
+      var marker = new BMap.Marker(pt);// 创建点
+      $("#lng").val(pt.lng);
+      $('#lat').val(pt.lat);
+     getlocation(pt);
+      map.addOverlay(marker);    //添加点
+  }
+  map.addEventListener("click", showInfo);
+  //gps 角度转换为百度地图角度坐标
+  function translate(point){
+          var convertor = new BMap.Convertor();
+          var pointArr = [];
+          pointArr.push(point);
+          convertor.translate(pointArr, 1, 5, translateCallback)
+  }
+  function translateCallback(data){
+        if(data.status === 0) {
+          map.clearOverlays();//清除地图上的点
+           var marker = new BMap.Marker(data.points[0]);// 创建点
+          $("#lng").val(data.points[0].lng);
+          $('#lat').val(data.points[0].lat);
+          getlocation(data.points[0]);
+          map.addOverlay(marker); 
+          map.centerAndZoom(data.points[0], 14);
+        }
+  }
+  $("#confirm").on("click", function(){
+              var x=$("#gpslng").val(),y=$("#gpslat").val(); 
+              if(x!=''&&y!=''){
+                var gpsPoint = new BMap.Point(x,y);
+                translate(gpsPoint);
+              }
+  });
+  //地址逆转换
+  function getlocation(point){
+        geoc.getLocation(point, function(rs){
+        var addComp = rs.addressComponents;
+        var str=(addComp.province + ", " + addComp.city + ", " + addComp.district + ", " + addComp.street + ", " + addComp.streetNumber);
+        $('#locationMsg').html(str);
+      });  
+  }
+  //mymap2 地图，展示多种点
+  // 百度地图API功能
+  var map2= new BMap.Map("mymap2");
+  var point = new BMap.Point(116.404, 39.915);
+  map2.centerAndZoom(point, 15);
+  // 编写自定义函数,创建标注
+  function addMarker(point,label){
+    var marker = new BMap.Marker(point);
+    marker.setLabel(label);
+    map2.addOverlay(marker);
+  }
+    // 编写自定义函数,创建标注，点类型2
+  function addMarker2(point,label){
+    var myIcon = new BMap.Icon("http://developer.baidu.com/map/jsdemo/img/fox.gif", new BMap.Size(300,157));
+    var marker2 = new BMap.Marker(point,{icon:myIcon});  //设置标注的图标
+    marker2.setLabel(label);
+    map2.addOverlay(marker2);
+  }
+  // 两种点分别随机向地图添加25个标注
+  var bounds = map2.getBounds();
+  var sw = bounds.getSouthWest();
+  var ne = bounds.getNorthEast();
+  var lngSpan = Math.abs(sw.lng - ne.lng);
+  var latSpan = Math.abs(ne.lat - sw.lat);
+  for (var i = 0; i < 25; i ++) {
+    var point = new BMap.Point(sw.lng + lngSpan * (Math.random() * 0.7), ne.lat - latSpan * (Math.random() * 0.7));
+    var label = new BMap.Label("type1");
+    label.setStyle({ display : "none"});
+    addMarker(point,label);
+  }
+  for (var i = 0; i < 25; i ++) {
+    var point = new BMap.Point(sw.lng + lngSpan * (Math.random() * 0.7), ne.lat - latSpan * (Math.random() * 0.7));
+    var label = new BMap.Label("type2");
+    label.setStyle({ display : "none"});
+    addMarker2(point,label);
+  }
+  //红点显示隐藏
+  function showOver(){
+    var allOverlay = map2.getOverlays();
+    hidePoint(allOverlay,'type1')
+    // marker2.hide(); 
+  }
+  //人物点显示隐藏
+  function hideOver(){
+    var allOverlay = map2.getOverlays();
+     hidePoint(allOverlay,'type2')
+    // marker2.show(); 
+  }
+  //通过点的label信息区分两种点，并进行显示隐藏状态的转换
+    function hidePoint(allOverlay,typestr){
+    for (var i = 0; i < allOverlay.length -1; i++){
+      if(allOverlay[i].getLabel().content == typestr){
+        // map2.removeOverlay(allOverlay[i]);
+        if(allOverlay[i].isVisible()){
+          allOverlay[i].hide()
+        }else{
+          allOverlay[i].show()
+        }
+      }
+    }
+  }
+</script>
